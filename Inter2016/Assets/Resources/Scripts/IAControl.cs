@@ -5,7 +5,8 @@ public enum IAState
 {
 	IDLE, 
 	CHASING,
-	ATTACKING
+	ATTACKING,
+	DEAD
 }
 public class IAControl : LivingObject 
 {
@@ -25,19 +26,19 @@ public class IAControl : LivingObject
 	{
 		base.Start ();
 		this.state = IAState.IDLE;
-		this.StartCoroutine ("CalculatePath");
 		this.agent = this.GetComponent<NavMeshAgent> ();
 		this.agent.stoppingDistance = this.stopingDistance;
 		this.agent.speed = this.speed2Walk;
 		this.agent.angularSpeed = this.speed2Look;
 		this.agent.SetDestination (this.target.position);
+		this.StartCoroutine ("CalculatePath");
 	}
 	
 	// Update is called once per frame
 	public override void Update()
 	{
-		this.agent.SetDestination(this.target.position);
-
+		if( !base.dead )
+			this.CheckState ();
 	}
 
 	public override void TakeDamage(float damage)
@@ -48,17 +49,23 @@ public class IAControl : LivingObject
 	}
 	public override void Dead()
 	{
+		this.StopAllCoroutines ();
+		this.agent.Stop ();
+		this.state = IAState.DEAD;
+		//this.GetComponent<MeshRenderer> ().material.color = new Color (0f, 0f, 0f, 1f);
+		this.GetComponent<MeshRenderer> ().material.color = new Color32 (0, 0, 0, 255);
 		base.Dead ();
 		//Animacion muerte
 	}
 
 	public IEnumerator CalculatePath()
 	{
-		while (base.dead) 
+		while ( this.state != IAState.DEAD && !base.dead ) 
 		{
 			this.RecalculatePath ();
 			yield return new WaitForSeconds(this.time2Refresh);
 		}
+		yield break;
 	}
 
 	public void RecalculatePath()
@@ -72,28 +79,39 @@ public class IAControl : LivingObject
 	void CheckState () 
 	{
 		distancia = this.target.position - this.transform.position;
-		if (Close2You())
-			this.state = IAState.CHASING;
-		if (Close2Target())
-			this.state = IAState.ATTACKING;
-		switch (this.state) {
-		case IAState.CHASING:
-			this.CalculateAngle ();
-			this.Translate2Target ();
-			break;
-		case IAState.ATTACKING:
-			this.CalculateAngle ();
-			break;
-		case IAState.IDLE:
-			break;
-	}
-			
-		
-		
-
-
+		if (Close2You ()) 
+		{
+			if (this.state != IAState.CHASING) 
+			{
+				this.state = IAState.CHASING;
+				this.agent.Resume();
+			}
+		}
+		if (Close2Target ()) 
+		{	
+			if (this.state != IAState.ATTACKING) 
+			{
+				this.state = IAState.ATTACKING;
+				this.agent.Stop();
+			}
+		}
 	}
 
+	void OldClass()
+	{
+		switch (this.state) 
+		{
+			case IAState.CHASING:
+				this.CalculateAngle ();
+				this.Translate2Target ();
+				break;
+			case IAState.ATTACKING:
+				this.CalculateAngle ();
+				break;
+			case IAState.IDLE:
+				break;
+		}
+	}
 	private void CalculateAngle()
 	{
 		
