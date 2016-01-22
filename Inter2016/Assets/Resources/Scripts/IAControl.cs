@@ -8,6 +8,8 @@ public enum IAState
 	ATTACKING,
 	DEAD
 }
+
+[RequireComponent(typeof(NavMeshAgent), typeof(CapsuleCollider))]
 public class IAControl : LivingObject 
 {
 	public Transform target;
@@ -19,6 +21,8 @@ public class IAControl : LivingObject
 	public IAState state;
 	//
 	private NavMeshAgent agent;
+	private Animator animator;
+	private CapsuleCollider coll;
 	public float time2Refresh = 0.1f;
 
 	// Use this for initialization
@@ -27,6 +31,8 @@ public class IAControl : LivingObject
 		base.Start ();
 		this.state = IAState.IDLE;
 		this.agent = this.GetComponent<NavMeshAgent> ();
+		this.animator = this.GetComponent<Animator> ();
+		this.coll = this.GetComponent<CapsuleCollider> ();
 		this.agent.stoppingDistance = this.stopingDistance;
 		this.agent.speed = this.speed2Walk;
 		this.agent.angularSpeed = this.speed2Look;
@@ -41,19 +47,31 @@ public class IAControl : LivingObject
 			this.CheckState ();
 	}
 
+	void LateUpdate()
+	{
+		this.animator.SetFloat ("SPEED", this.agent.speed);
+	}
 	public override void TakeDamage(float damage)
 	{
 		print (this.name+": RECIBE "+damage);
-		base.TakeDamage (damage);
-		//correr animacion de daño
+		base.health -= damage;
+		if (base.health <= 0 && !base.dead) 
+		{
+			this.dead = true;
+			this.Dead ();
+		}
 	}
 	public override void Dead()
 	{
+		this.coll.enabled = false;
+		print (this.name+": MUERTO");
+		//
 		this.StopAllCoroutines ();
 		this.agent.Stop ();
+		this.animator.SetTrigger ( "DEAD" );
 		this.state = IAState.DEAD;
 		//this.GetComponent<MeshRenderer> ().material.color = new Color (0f, 0f, 0f, 1f);
-		this.GetComponent<MeshRenderer> ().material.color = new Color32 (0, 0, 0, 255);
+		//this.GetComponent<MeshRenderer> ().material.color = new Color32 (0, 0, 0, 255);
 		base.Dead ();
 		//Animacion muerte
 	}
@@ -83,6 +101,7 @@ public class IAControl : LivingObject
 		{
 			if (this.state != IAState.CHASING) 
 			{
+				this.agent.speed = 3f;
 				this.state = IAState.CHASING;
 				this.agent.Resume();
 			}
@@ -91,6 +110,7 @@ public class IAControl : LivingObject
 		{	
 			if (this.state != IAState.ATTACKING) 
 			{
+				this.agent.speed = 0f;
 				this.state = IAState.ATTACKING;
 				this.agent.Stop();
 			}

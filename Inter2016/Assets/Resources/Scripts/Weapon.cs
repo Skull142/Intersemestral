@@ -44,10 +44,11 @@ public class Weapon : MonoBehaviour
 		{
 		case FireType.AUTO:
 			if (Input.GetMouseButton (this.MouseButton (this.mouseButton)) && this.charger > 0 && this.ammo > 0) {
+				print ( this.fireType );
 				this.charger--;
 				Ray ray = Camera.main.ScreenPointToRay (new Vector3 (Screen.width / 2, Screen.height / 2, 0f));
 				RaycastHit hit;
-				if (Physics.Raycast (ray, out hit, this.reachability, this.layer)) {
+				if (Physics.Raycast (ray, out hit, this.reachability, this.layer, QueryTriggerInteraction.Collide)) {
 					print (hit.collider.gameObject.name);
 					hit.collider.gameObject.SendMessage ("TakeDamage", this.damage, SendMessageOptions.DontRequireReceiver);
 				}
